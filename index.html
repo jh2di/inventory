@@ -4,49 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>우리집 물품창고</title>
+<meta http-equiv="refresh" content="0; url=https://script.google.com/macros/s/AKfycbwbhcZEUGvUY6c2uxzbn1tNt9AaX5ThUh_wxBYzmEsfwzcCR2qZPHlvz6teJK77HAwJ/exec">
 <style>
-  html,body{margin:0;height:100%;background:#f6f4ef}
-  iframe{position:fixed;inset:0;width:100%;height:100%;border:0;display:block}
-  .newtab{position:fixed;left:10px;bottom:10px;z-index:5;font:12px -apple-system,"Malgun Gothic",sans-serif;
-          color:#6b7280;background:rgba(255,255,255,.85);padding:4px 8px;border-radius:8px;text-decoration:none}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f6f4ef;
+       font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;color:#1f2430}
+  .box{text-align:center;padding:24px}
+  .big{font-size:48px}
+  a{display:inline-block;margin-top:16px;background:#2f6be0;color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:700}
+  p{color:#737a87}
 </style>
 </head>
 <body>
-  <iframe id="app" allow="camera; clipboard-write" title="우리집 물품창고"></iframe>
-  <a class="newtab" id="newtab" target="_blank" rel="noopener">새 창으로 열기</a>
-  <script>
-    /* 앱 주소 (Apps Script 웹 앱) */
-    var APP = 'https://script.google.com/macros/s/AKfycbwbhcZEUGvUY6c2uxzbn1tNt9AaX5ThUh_wxBYzmEsfwzcCR2qZPHlvz6teJK77HAwJ/exec';
-    var KEY = 'inv_space';
-
-    /* 이 기기의 물품창고 코드: 주소에 ?code= 가 있으면 그걸 쓰고, 없으면 기억해 둔 코드, 그것도 없으면 새로 만듦
-       → 링크를 연 사람마다 자기 물품창고가 따로 생겨 서로 안 보입니다 */
-    function get(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
-    function set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-    function gen() {
-      var a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', s = '', r = new Uint32Array(10);
-      crypto.getRandomValues(r);
-      for (var i = 0; i < r.length; i++) s += a[r[i] % a.length];
-      return s;
-    }
-    var ok = function (c) { return /^[A-Z0-9]{6,16}$/.test(c); };
-    var q = (new URLSearchParams(location.search).get('code') || '').trim().toUpperCase();
-    var code = '';
-    if (ok(q)) { code = q; set(KEY, q); history.replaceState(null, '', location.pathname); } /* 주소창에서 코드를 지움 */
-    else { code = get(KEY).toUpperCase(); if (!ok(code)) { code = gen(); set(KEY, code); } }
-
-    var url = APP + '?code=' + encodeURIComponent(code);
-    document.getElementById('app').src = url;
-    document.getElementById('newtab').href = url;
-
-    /* 앱 안에서 "다른 코드로 열기"를 하면 여기에도 기억 */
-    window.addEventListener('message', function (e) {
-      var d = e.data;
-      if (d && d.type === 'inv-space' && ok(String(d.code || ''))) {
-        set(KEY, d.code);
-        document.getElementById('newtab').href = APP + '?code=' + encodeURIComponent(d.code);
-      }
-    });
-  </script>
+  <div class="box">
+    <div class="big">🏠</div>
+    <h1>우리집 물품창고</h1>
+    <p>앱으로 이동하는 중이에요…<br>처음 한 번은 구글 로그인과 허용이 필요해요.</p>
+    <a id="go" href="https://script.google.com/macros/s/AKfycbwbhcZEUGvUY6c2uxzbn1tNt9AaX5ThUh_wxBYzmEsfwzcCR2qZPHlvz6teJK77HAwJ/exec">바로 열기</a>
+  </div>
+  <script>location.replace(document.getElementById('go').href);</script>
 </body>
 </html>
