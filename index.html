@@ -1,29 +1,1536 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+<base target="_top">
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>재고 관리</title>
-<meta http-equiv="refresh" content="0; url=https://script.google.com/macros/s/AKfycbwbhcZEUGvUY6c2uxzbn1tNt9AaX5ThUh_wxBYzmEsfwzcCR2qZPHlvz6teJK77HAwJ/exec">
 <style>
-  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f5f8;
-       font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;color:#111827}
-  .box{text-align:center;padding:24px}
-  .big{font-size:48px}
-  a{display:inline-block;margin-top:16px;background:#2563eb;color:#fff;text-decoration:none;
-    padding:12px 22px;border-radius:12px;font-weight:700}
-  p{color:#6b7280}
+  :root{
+    --bg:#f6f4ef; --card:#ffffff; --text:#1f2430; --sub:#4b5260; --muted:#737a87; --line:#e8e4dc;
+    --primary:#2f6be0; --primary-weak:#ebf1fd;
+    --warm:#f59e0b; --warm-weak:#fff4e0; --adm:#6d28d9; --adm-weak:#f3ecff;
+    --ok:#15803d; --ok-weak:#e8f6ec; --low:#c2410c; --low-weak:#fff1e6; --out:#b91c1c; --out-weak:#fdecec;
+    --radius:16px; --shadow:0 1px 2px rgba(17,24,39,.05),0 4px 12px rgba(17,24,39,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Malgun Gothic","Noto Sans KR",sans-serif;font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  button,input,select,textarea{font:inherit;color:inherit}
+  button{cursor:pointer}
+  input::placeholder,textarea::placeholder{color:#9ca3af}
+  .hidden{display:none!important}
+
+  /* ---------- 상단 ---------- */
+  .top{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .top-in{max-width:1200px;margin:0 auto;display:flex;gap:12px;align-items:center;padding:12px 16px}
+  .brand{display:flex;align-items:center;gap:10px;white-space:nowrap}
+  .logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#ffe7c2,#ffd39a);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.06)}
+  .bname{display:flex;flex-direction:column;font-weight:800;font-size:19px;line-height:1.15;letter-spacing:-.2px}
+  .bname small{font-size:12.5px;font-weight:500;color:var(--muted);letter-spacing:0;margin-top:2px}
+  .adm-btn{margin-left:auto;border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;font-weight:700;color:var(--sub);white-space:nowrap}
+  .adm-btn:hover{border-color:#d6d0c4}
+  .adm-btn.on{background:var(--adm-weak);border-color:#ddd0fb;color:var(--adm)}
+  body.is-admin .top{box-shadow:inset 0 3px 0 #8b5cf6}
+  body:not(.is-admin) .admin-only{display:none!important}
+  .adm-tag{font-size:12px;font-weight:700;color:var(--adm);background:var(--adm-weak);padding:3px 8px;border-radius:999px;vertical-align:middle;margin-left:4px}
+  .admmenu{display:grid;gap:8px;padding-bottom:20px!important}
+  .admmenu button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1.5px solid var(--line);background:#fff;border-radius:14px;padding:12px 14px}
+  .admmenu button:hover{border-color:#ddd0fb;background:#fcfaff}
+  .admmenu b{font-size:16px}
+  .admmenu span{font-size:13px;color:var(--muted)}
+  .admmenu .out b{color:var(--out)}
+  .search{flex:1;max-width:480px;position:relative}
+  .search input{width:100%;padding:10px 14px 10px 38px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+  .search input:focus{outline:none;border-color:var(--primary);background:#fff}
+  .search::before{content:"🔍";position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;opacity:.6}
+  .chip-user{margin-left:auto;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;white-space:nowrap}
+  .loadbar{position:fixed;top:0;left:0;height:3px;width:100%;background:linear-gradient(90deg,transparent,var(--primary),transparent);background-size:50% 100%;animation:ld 1s linear infinite;z-index:80}
+  @keyframes ld{from{background-position:-50% 0}to{background-position:150% 0}}
+  .errbar{background:var(--out-weak);color:var(--out);border-bottom:1px solid #f5c2c2;padding:10px 16px;font-size:14px}
+  .errbar-in{max-width:1200px;margin:0 auto;display:flex;gap:10px;align-items:center}
+  .errbar span{flex:1;word-break:break-all}
+  .errbar button{border:1px solid #f5c2c2;background:#fff;color:var(--out);border-radius:8px;padding:5px 12px;white-space:nowrap}
+
+  main{max-width:1200px;margin:0 auto;padding:18px 16px 90px}
+
+  /* ---------- 요약 ---------- */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .stat{background:var(--card);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);border:0;text-align:left}
+  .stat .k{color:var(--muted);font-size:14px}
+  .stat .v{font-size:28px;font-weight:800;margin-top:2px}
+  .stat .v small{font-size:15px;font-weight:600;color:var(--muted);margin-left:2px}
+  .stat.low .v{color:var(--low)} .stat.out .v{color:var(--out)}
+  .stat.click:hover{outline:2px solid var(--primary-weak)}
+  .sync{color:var(--muted);font-size:13px;margin:8px 2px 18px;text-align:right}
+  .sync button{border:0;background:none;color:var(--primary);padding:0 0 0 8px}
+
+  /* ---------- 장소 선택 + 도구 ---------- */
+  .bar{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:22px}
+  .bar-label{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px}
+  .bar-label button{border:0;background:none;color:var(--primary);font-weight:700;font-size:13.5px;padding:0}
+  .locchips{display:flex;gap:8px;flex-wrap:wrap}
+  .lchip{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;font-weight:600;white-space:nowrap}
+  .lchip .n{display:inline-block;min-width:22px;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--bg);color:var(--sub);font-size:13px;text-align:center}
+  .lchip.on{border-color:var(--primary);background:var(--primary-weak);color:var(--primary)}
+  .lchip.on .n{background:#fff;color:var(--primary)}
+  .lchip.add{border-style:dashed;color:var(--primary)}
+  .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+  .toggle{border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:8px 12px;font-weight:600}
+  .toggle.on{border-color:var(--low);background:var(--low-weak);color:var(--low)}
+  .seg{display:flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden}
+  .seg button{border:0;background:var(--card);padding:8px 13px;font-weight:600;color:var(--sub)}
+  .seg button.on{background:var(--primary-weak);color:var(--primary)}
+  .grow{flex:1}
+  .btn{border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:9px 14px;font-weight:600;white-space:nowrap}
+  .btn:hover{border-color:#cfd6e4}
+  .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+  .btn.danger{color:var(--out);border-color:#f5c2c2}
+  .btn.sm{padding:6px 11px;font-size:14px}
+  .btn:disabled{opacity:.5;cursor:default}
+
+  /* ---------- 장소 섹션 ---------- */
+  .loc{margin-bottom:30px}
+  .loc-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 2px 10px;margin-bottom:14px;border-bottom:2px solid var(--line)}
+  .loc-head h2{margin:0;font-size:21px;font-weight:800}
+  .loc-head .pin{font-size:20px}
+  .loc-meta{color:var(--muted);font-size:14px}
+  .loc-memo{color:var(--muted);font-size:13.5px;flex-basis:100%;margin-top:-4px;padding-left:30px}
+  .pill{font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px}
+  .pill.low{background:var(--low-weak);color:var(--low)}
+  .loc-actions{margin-left:auto;display:flex;gap:6px}
+
+  /* ---------- 물품 카드 ---------- */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;cursor:pointer;display:flex;flex-direction:column;border:2px solid transparent;transition:border-color .15s,transform .15s}
+  .card:hover{border-color:var(--primary-weak);transform:translateY(-2px)}
+  .card.st-low{border-color:#fbd5b8} .card.st-out{border-color:#f5c2c2}
+  .photo{position:relative;aspect-ratio:4/3;background:#eef0f3;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .photo img{width:100%;height:100%;object-fit:cover;display:block}
+  .noimg{display:flex;flex-direction:column;align-items:center;gap:4px;color:#9ca3af;font-size:13px}
+  .noimg b{font-size:34px;font-weight:400}
+  .status{position:absolute;top:10px;left:10px;font-size:13px;font-weight:800;padding:4px 10px;border-radius:999px;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .status.ok{background:#fff;color:var(--ok)} .status.low{background:var(--low);color:#fff} .status.out{background:var(--out);color:#fff}
+  .editmark{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.92);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:700;color:var(--sub);opacity:0;transition:opacity .15s}
+  .card:hover .editmark{opacity:1}
+  .snap{position:absolute;right:10px;bottom:10px;width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.95);box-shadow:0 2px 6px rgba(0,0,0,.18);font-size:20px;line-height:1}
+  .snap:active{transform:scale(.94)}
+  .rowbtns{flex-wrap:wrap}
+  .cbody{padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px}
+  .iname{margin:0;font-size:18px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .itags{font-size:12.5px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fields{display:grid;gap:8px;margin:0}
+  .f{display:grid;grid-template-columns:44px 1fr;align-items:center;gap:8px}
+  .f dt{font-size:13px;font-weight:700;color:var(--muted)}
+  .f dd{margin:0;min-width:0}
+  .qline{display:flex;align-items:center;gap:6px}
+  .qnum{font-size:26px;font-weight:800;line-height:1}
+  .qnum.low{color:var(--low)} .qnum.out{color:var(--out)}
+  .qunit{font-size:15px;font-weight:600;color:var(--sub)}
+  .qmin{font-size:12.5px;color:var(--muted);margin-left:auto;white-space:nowrap}
+  .qbtns{display:flex;gap:8px}
+  .qbtn{flex:1;height:40px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);font-size:15px;font-weight:700}
+  .qbtn.minus{color:var(--low)} .qbtn.plus{color:var(--ok)}
+  .qbtn:active{background:var(--bg)}
+  .locname{font-weight:600;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* ---------- 빠른 등록 타일 ---------- */
+  .qadd{border:2px dashed #cfd6e4;border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:8px;justify-content:center;min-height:220px;background:rgba(255,255,255,.5)}
+  .qadd:focus-within{border-color:var(--primary);background:#fff}
+  .qadd-t{font-weight:800;color:var(--primary);font-size:16px}
+  .qadd-s{font-size:12.5px;color:var(--muted);margin-top:-6px}
+  .qadd input{padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;background:#fff;width:100%;min-width:0}
+  .qadd input:focus{outline:none;border-color:var(--primary)}
+  .qadd-r{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .linkbtn{border:0;background:none;color:var(--muted);font-size:13.5px;padding:2px 0;text-decoration:underline;text-underline-offset:3px}
+
+  /* ---------- 표 보기 ---------- */
+  .tablewrap{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:auto}
+  table{width:100%;border-collapse:collapse;min-width:640px}
+  th{background:#f9fafb;text-align:left;font-size:13px;color:var(--muted);font-weight:700;padding:12px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tr.row{cursor:pointer} tr.row:hover td{background:#fafbff}
+  .tthumb{width:64px;height:64px;border-radius:10px;overflow:hidden;background:#eef0f3;display:flex;align-items:center;justify-content:center}
+  .tthumb img{width:100%;height:100%;object-fit:cover}
+  .tname{font-weight:800;font-size:16.5px}
+  .tq{display:flex;align-items:center;gap:8px;white-space:nowrap}
+  .tq .qbtn{flex:none;width:36px;height:34px}
+  .badge{font-size:13px;font-weight:800;padding:4px 10px;border-radius:999px;white-space:nowrap}
+  .badge.ok{background:var(--ok-weak);color:var(--ok)} .badge.low{background:var(--low-weak);color:var(--low)} .badge.out{background:var(--out-weak);color:var(--out)}
+
+  .empty{text-align:center;color:var(--muted);padding:60px 16px}
+  .empty .big{font-size:42px;margin-bottom:8px}
+
+  /* ---------- 모달 ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(17,24,39,.5);z-index:30;display:flex;align-items:center;justify-content:center;padding:16px}
+  .overlay.layer2{z-index:50}
+  .modal{background:var(--card);border-radius:20px;width:100%;max-width:580px;max-height:calc(100vh - 32px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.2)}
+  .modal.small{max-width:420px}
+  .mhead{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+  .mhead h2{margin:0;font-size:19px}
+  .x{border:0;background:none;font-size:20px;color:var(--muted)}
+  .mbody{padding:6px 20px 18px;overflow:auto}
+  .mfoot{display:flex;gap:8px;align-items:center;padding:14px 20px;border-top:1px solid var(--line);background:#fcfcfd}
+  .sp{flex:1}
+  .msec{padding:16px 0;border-bottom:1px solid var(--line)}
+  .msec:last-child{border-bottom:0}
+  .msec h3{margin:0 0 12px;font-size:16px;font-weight:800}
+  .msec h3 small{font-weight:500;color:var(--muted);font-size:13px}
+  .mphoto{aspect-ratio:4/3;background:#eef0f3;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px dashed transparent}
+  .mphoto:hover{border-color:#cfd6e4}
+  .mphoto.drag{border-color:var(--primary);background:var(--primary-weak)}
+  .mphoto img{width:100%;height:100%;object-fit:contain;background:#fff}
+  .rowbtns{display:flex;gap:8px;margin-top:10px;align-items:center}
+  .fld{display:grid;gap:6px;margin-bottom:12px}
+  .fld:last-child{margin-bottom:0}
+  .fld span{font-size:14px;font-weight:600;color:var(--sub)}
+  .fld input,.fld textarea{padding:11px 13px;border:1.5px solid var(--line);border-radius:12px;background:#fff;font-size:16px;width:100%}
+  .fld input:focus,.fld textarea:focus{outline:none;border-color:var(--primary)}
+  .fld textarea{min-height:70px;resize:vertical}
+  .bigname{font-size:18px!important;font-weight:700}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
+  .hint{font-size:13px;color:var(--muted);margin-top:8px}
+
+  .stepper{display:flex;align-items:center;gap:8px}
+  .stp{width:50px;height:50px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font-size:24px;font-weight:700;line-height:1}
+  .stp.m{color:var(--low)} .stp.p{color:var(--ok)}
+  .stepper input{width:130px;height:50px;text-align:center;font-size:24px;font-weight:800;border:1.5px solid var(--line);border-radius:12px}
+  .stepper input:focus{outline:none;border-color:var(--primary)}
+  .stp-unit{font-weight:700;color:var(--sub);font-size:17px;white-space:nowrap}
+  .stepper .badge{margin-left:auto}
+  .quicksteps{display:flex;gap:6px;margin:10px 0 12px;flex-wrap:wrap}
+  .quicksteps button{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;font-weight:700;font-size:14px;color:var(--sub)}
+  .qdiff{font-size:14px;color:var(--muted);background:var(--bg);border-radius:10px;padding:9px 12px;margin-bottom:12px}
+  .qdiff.on{background:var(--primary-weak);color:var(--text)}
+
+  .pills{display:flex;gap:8px;flex-wrap:wrap}
+  .lpick{border:1.5px solid var(--line);background:var(--card);border-radius:12px;padding:10px 14px;font-weight:600}
+  .lpick.on{border-color:var(--primary);background:var(--primary-weak);color:var(--primary)}
+  .lpick.new{border-style:dashed;color:var(--primary)}
+  .newloc{display:flex;gap:6px;margin-top:10px}
+  .newloc input{flex:1;min-width:0;padding:9px 12px;border:1.5px solid var(--primary);border-radius:10px}
+  .newloc input:focus{outline:none}
+
+  /* ---------- 장소 관리 ---------- */
+  .mgr-row{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+  .mgr-order{display:flex;flex-direction:column;gap:4px}
+  .icon{width:34px;height:28px;border:1.5px solid var(--line);background:#fff;border-radius:8px;font-weight:700;color:var(--sub)}
+  .icon:disabled{opacity:.3;cursor:default}
+  .mgr-fields{flex:1;display:grid;gap:6px;min-width:0}
+  .mgr-fields input{padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;width:100%;background:#fff}
+  .mgr-fields input:focus{outline:none;border-color:var(--primary)}
+  .mgr-name{font-weight:700}
+  .mgr-memo{font-size:14px}
+  .mgr-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .mgr-count{font-size:13px;color:var(--muted);white-space:nowrap}
+  .add-row{width:100%;margin-top:12px;border-style:dashed;color:var(--primary)}
+
+  /* ---------- 활동 기록 ---------- */
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--card);z-index:40;box-shadow:-8px 0 24px rgba(0,0,0,.14);display:flex;flex-direction:column}
+  .dfilter{display:flex;gap:6px;flex-wrap:wrap;padding:10px 20px 12px;border-bottom:1px solid var(--line)}
+  .dtools{display:flex;gap:8px;padding:14px 20px 4px;align-items:center}
+  .dtools input{flex:1;min-width:0;padding:8px 12px;border:1.5px solid var(--line);border-radius:10px}
+  .dtools input:focus{outline:none;border-color:var(--primary)}
+  .dsum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 20px 4px}
+  .ds{border-radius:12px;padding:10px 12px;background:var(--bg)}
+  .ds .k{font-size:12.5px;font-weight:700;color:var(--muted)}
+  .ds .v{font-size:22px;font-weight:800;line-height:1.2}
+  .ds .v small{font-size:12px;font-weight:600;color:var(--muted);margin-left:2px}
+  .ds .s{font-size:12.5px;font-weight:700}
+  .ds.in{background:var(--ok-weak)} .ds.in .s{color:var(--ok)}
+  .ds.out{background:var(--low-weak)} .ds.out .s{color:var(--low)}
+  .lday{position:sticky;top:0;background:var(--card);font-size:13px;font-weight:800;color:var(--sub);padding:12px 0 6px;border-bottom:2px solid var(--line)}
+  .dfoot{padding:12px 20px;border-top:1px solid var(--line);font-size:14px}
+  .dfoot a{color:var(--primary);text-decoration:none;font-weight:600}
+  .dfilter button{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:5px 12px;font-size:14px;font-weight:600}
+  .dfilter button.on{background:var(--primary-weak);color:var(--primary);border-color:var(--primary-weak)}
+  .logs{display:flex;flex-direction:column}
+  .drawer .logs{overflow:auto;padding:4px 20px 20px}
+  .log{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .log.click{cursor:pointer}
+  .lt{font-size:13px;font-weight:800;padding:4px 9px;border-radius:8px;height:fit-content;white-space:nowrap}
+  .lt.in{background:var(--ok-weak);color:var(--ok)} .lt.out{background:var(--low-weak);color:var(--low)}
+  .lt.new{background:var(--primary-weak);color:var(--primary)} .lt.edit{background:var(--bg);color:var(--sub)} .lt.del{background:var(--out-weak);color:var(--out)}
+  .lb{min-width:0}
+  .l1{font-size:15px}
+  .l2{font-size:13px;color:var(--muted);margin-top:2px}
+  .pos{color:var(--ok);font-weight:700} .neg{color:var(--low);font-weight:700}
+
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#111827;color:#fff;padding:11px 18px;border-radius:12px;z-index:90;font-size:15px;max-width:calc(100% - 32px)}
+  .toast.err{background:var(--out)}
+  .spacebar{text-align:center;color:var(--muted);font-size:13px;margin:26px 0 6px}
+  .spacebar b{color:var(--sub);letter-spacing:1px}
+  .spacebar button{border:0;background:none;color:var(--primary);font-weight:600;padding:0 2px}
+  .codebig{font-size:30px;font-weight:800;letter-spacing:4px;text-align:center;background:var(--bg);border-radius:14px;padding:14px;user-select:all}
+  .fab{display:none;position:fixed;right:18px;bottom:22px;width:58px;height:58px;border-radius:50%;background:var(--primary);color:#fff;border:0;font-size:30px;line-height:1;box-shadow:0 6px 16px rgba(37,99,235,.4);z-index:20}
+
+  @media (max-width:680px){
+    .top-in{flex-wrap:wrap}
+    .search{order:3;flex-basis:100%;max-width:none}
+    main{padding:14px 12px 90px}
+    .stats{grid-template-columns:repeat(2,1fr);gap:10px}
+    .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .snap{width:36px;height:36px;font-size:17px;right:8px;bottom:8px}
+    .cbody{padding:12px}
+    .iname{font-size:16px}
+    .f{grid-template-columns:1fr;gap:2px}
+    .qnum{font-size:22px}
+    .qmin,.editmark{display:none}
+    .loc-head h2{font-size:19px}
+    .loc-actions{margin-left:0;flex-basis:100%}
+    .two{grid-template-columns:1fr}
+    .qadd{min-height:0}
+    .stepper input{width:100px}
+    #newItemBtn{display:none}
+    .fab{display:block}
+    /* 휴대폰: 첫 화면에 물품이 바로 보이도록 위쪽을 촘촘하게 */
+    .top-in{padding:10px 12px;gap:8px}
+    .logo{width:34px;height:34px;font-size:19px;border-radius:10px}
+    .bname{font-size:17px}
+    .adm-btn{padding:6px 11px;font-size:13.5px}
+    .search input{padding:9px 12px 9px 34px}
+    .stats{grid-template-columns:repeat(4,1fr);gap:6px}
+    .stat{padding:8px 6px;text-align:center;border-radius:12px}
+    .stat .k{font-size:11.5px;white-space:nowrap}
+    .stat .v{font-size:20px}
+    .stat .v small{font-size:12px}
+    .sync{font-size:11.5px;margin:6px 2px 10px}
+    .bar{padding:10px 12px;margin-bottom:14px}
+    .bar-label{margin-bottom:6px}
+    .bar-label button{font-size:12.5px}
+    .locchips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+    .locchips::-webkit-scrollbar{display:none}
+    .lchip{padding:6px 12px;font-size:14.5px}
+    .tools{margin-top:10px;padding-top:10px;gap:6px;flex-wrap:nowrap}
+    .toggle,.seg button,.tools .btn{padding:6px 10px;font-size:14px}
+    .tools .grow{display:none}
+    .loc{margin-bottom:22px}
+    .loc-head{gap:6px 8px;margin-bottom:10px;padding-bottom:8px}
+    .loc-actions{margin-left:auto;flex-basis:auto}
+    .loc-memo{padding-left:0;flex-basis:100%;margin-top:0}
+    .qbtn{height:38px;font-size:14px}
+    .sync .auto{display:none}
+    .dtools{padding:12px 14px 4px}
+    .dtools .seg button{padding:6px 9px}
+    .dsum{padding:8px 14px 4px;gap:6px}
+    .ds{padding:8px 10px} .ds .v{font-size:19px} .ds .k{font-size:11.5px}
+    .dfilter{flex-wrap:nowrap;overflow-x:auto;padding:8px 14px 10px;scrollbar-width:none}
+    .dfilter::-webkit-scrollbar{display:none}
+    .dfilter button{flex:none}
+    .drawer .logs{padding:0 14px 16px}
+    .dfoot{padding:10px 14px}
+  }
 </style>
 </head>
 <body>
-  <div class="box">
-    <div class="big">📦</div>
-    <h1>재고 관리</h1>
-    <p>앱으로 이동하는 중이에요…</p>
-    <a id="go" href="https://script.google.com/macros/s/AKfycbwbhcZEUGvUY6c2uxzbn1tNt9AaX5ThUh_wxBYzmEsfwzcCR2qZPHlvz6teJK77HAwJ/exec">바로 열기</a>
+<div id="loadbar" class="loadbar hidden"></div>
+
+<header class="top"><div class="top-in">
+  <div class="brand"><span class="logo">🏠</span><span class="bname">우리집 물품창고<small id="today"></small></span></div>
+  <div class="search"><input id="search" type="search" placeholder="물품 이름, 장소, 태그 검색"></div>
+  <button id="admBtn" class="adm-btn" type="button">🔒 관리자</button>
+</div></header>
+<div id="errbar" class="errbar hidden"><div class="errbar-in"><span id="errTxt"></span><button id="errRetry">다시 시도</button></div></div>
+
+<main>
+  <section id="stats" class="stats"></section>
+  <div class="sync"><span id="syncTxt">불러오는 중…</span><button id="refreshBtn">새로고침</button></div>
+
+  <div class="bar">
+    <div class="bar-label"><span>📍 보관 장소</span><button id="mgrBtn" class="admin-only">🗂️ 장소 관리</button></div>
+    <div class="locchips" id="locChips"></div>
+    <div class="tools">
+      <button class="toggle" id="lowBtn">⚠️ 부족한 것만</button>
+      <div class="seg" id="viewSeg"><button data-v="card" class="on">카드</button><button data-v="table">표</button></div>
+      <span class="grow"></span>
+      <button class="btn admin-only" id="logBtn">📋 입출고 내역</button>
+      <button class="btn primary" id="newItemBtn">+ 물품 등록</button>
+    </div>
   </div>
-  <script>
-    location.replace(document.getElementById('go').href);
-  </script>
+
+  <div id="content"></div>
+  <div class="spacebar" id="spaceBar"></div>
+</main>
+
+<button class="fab" id="fab" title="물품 등록">+</button>
+
+<datalist id="unitList"><option value="개"><option value="박스"><option value="롤"><option value="켤레"><option value="자루"><option value="세트"><option value="팩"><option value="병"><option value="장"></datalist>
+
+<div id="itemModal" class="overlay hidden"><div class="modal" id="itemModalBox"></div></div>
+<div id="mgrModal" class="overlay hidden"><div class="modal" id="mgrBox"></div></div>
+<div id="smallModal" class="overlay layer2 hidden"><div class="modal small" id="smallModalBox"></div></div>
+
+<aside id="drawer" class="drawer hidden">
+  <div class="mhead"><h2>📋 입출고 내역 <span class="adm-tag">관리자</span></h2><button class="x" id="closeDrawer">✕</button></div>
+  <div class="dtools">
+    <div class="seg" id="logPeriod"><button data-p="1">오늘</button><button data-p="7" class="on">7일</button><button data-p="30">30일</button><button data-p="0">전체</button></div>
+    <input id="logSearch" type="search" placeholder="물품 이름으로 찾기">
+  </div>
+  <div class="dsum" id="logSum"></div>
+  <div class="dfilter" id="logFilter">
+    <button data-t="" class="on">전체</button><button data-t="입고">입고</button><button data-t="출고">출고</button>
+    <button data-t="신규">신규</button><button data-t="수정">수정</button><button data-t="삭제">삭제</button>
+  </div>
+  <div class="logs" id="logList"></div>
+  <div class="dfoot"><a id="sheetLink" class="hidden" target="_blank" rel="noopener">구글 시트에서 전체 기록 보기 ↗</a></div>
+</aside>
+
+<div id="toast" class="toast hidden"></div>
+<!-- 카메라 바로 열기용 (휴대폰에서는 카메라 앱이 바로 열립니다) -->
+<input type="file" accept="image/*" capture="environment" id="camGlobal" hidden>
+
+<!-- 안전장치: 본 스크립트에 오류가 나면 이유를 화면에 보여줍니다 -->
+<script>
+  window.__INV_ERRORS__ = [];
+  window.onerror = function (msg, src, line, col) {
+    window.__INV_ERRORS__.push(String(msg) + ' [' + line + ':' + col + ']');
+    if (window.__INV_READY__) return;
+    showGuard();
+  };
+  function showGuard() {
+    var bar = document.getElementById('errbar');
+    var detail = window.__INV_ERRORS__.length ? ' 오류: ' + window.__INV_ERRORS__.join(' / ') : '';
+    document.getElementById('errTxt').textContent = '화면 스크립트가 실행되지 않았어요. 이 문구를 캡처해서 보내주세요.' + detail;
+    bar.className = 'errbar';
+  }
+  setTimeout(function () { if (!window.__INV_READY__) showGuard(); }, 3000);
+</script>
+
+<script>
+(function () {
+'use strict';
+
+/* 주의: 이 스크립트 안에서는 슬래시 두 개를 쓰지 않습니다(구글이 그 뒤를 잘라냄). 주석은 이 형식만 사용. */
+/* 이모지는 코드 표기로 씁니다. */
+const APP_VERSION = 'v10'; /* Code.gs 의 APP_VERSION 과 같아야 합니다. */
+const DRIVE_THUMB = 'https:' + '/' + '/drive.google.com/thumbnail?id=';
+const NONE = '__none';
+const E = {
+  cam: '\uD83D\uDCF7', pin: '\uD83D\uDCCD', find: '\uD83D\uDD0D', good: '\uD83D\uDC4D', memo: '\uD83D\uDCDD',
+  num: '\uD83D\uDD22', tag: '\uD83C\uDFF7\uFE0F', clock: '\uD83D\uDD52', folder: '\uD83D\uDDC2\uFE0F', box: '\uD83D\uDCE6', album: '\uD83D\uDDBC\uFE0F'
+};
+
+/* ================= 상태 ================= */
+const state = { items: [], locs: [], logs: [], rev: -1, loc: 'all', lowOnly: false, view: 'card', q: '', user: '', logType: '', lastSync: null };
+const pending = {};    /* 아직 서버에 안 보낸 입고/출고 수량 (연속 클릭을 한 번에 보냄) */
+const pendTimer = {};
+let modal = null;      /* 물품 창 상태 */
+let mgr = null;        /* 장소 관리 창 상태 */
+let busy = 0;
+const imgCache = new Map();
+
+const q1 = s => document.querySelector(s);
+const qa = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const toInt = v => { const n = parseInt(v, 10); return isNaN(n) ? 0 : n; };
+function lsGet(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+/* ================= 관리자 모드 ================= */
+/* 관리자만: 입출고 내역 · 장소 추가/편집/삭제 · 물품 삭제 · 물품별 변경 이력
+   모두 가능: 보기 · 검색 · 입고/출고 · 물품 등록/수정 · 사진 */
+let admToken = lsGet('inv_adm');   /* 비밀번호 없이 이 기기에서 켜고 끔 */
+const isAdm = () => !!admToken;
+function setAdmin(token) {
+  admToken = token || '';
+  lsSet('inv_adm', admToken);
+  document.body.classList.toggle('is-admin', isAdm());
+  q1('#admBtn').innerHTML = isAdm() ? '\uD83D\uDEE1\uFE0F 관리자 모드' : '\uD83D\uDD12 관리자';
+  q1('#admBtn').classList.toggle('on', isAdm());
+  if (!isAdm()) q1('#drawer').classList.add('hidden');
+  render();
+}
+function adminExpired() {
+  if (!isAdm()) return;
+  setAdmin('');
+  toast('관리자 모드가 끝났어요. 다시 로그인해 주세요.', true);
+}
+
+function call(fn, ...args) {
+  return new Promise((res, rej) => {
+    if (typeof google === 'undefined' || !google.script || !google.script.run) {
+      rej(new Error('서버에 연결할 수 없습니다. 배포된 웹 앱 주소(/exec)로 열어주세요.')); return;
+    }
+    google.script.run.withSuccessHandler(res).withFailureHandler(rej).api(space, fn, args);
+  });
+}
+function setBusy(d) { busy += d; q1('#loadbar').classList.toggle('hidden', busy <= 0); }
+function toast(msg, err) {
+  const t = q1('#toast'); t.textContent = msg; t.className = 'toast' + (err ? ' err' : '');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.add('hidden'), err ? 4000 : 2200);
+}
+function errMsg(e) { return (e && e.message ? e.message : String(e)).replace(/^Error:\s*/, ''); }
+function showErr(msg) { q1('#errTxt').textContent = msg; q1('#errbar').classList.remove('hidden'); }
+function hideErr() { q1('#errbar').classList.add('hidden'); }
+window.addEventListener('error', e => { if (e instanceof ErrorEvent) showErr('화면 오류: ' + e.message); });
+window.addEventListener('unhandledrejection', e => showErr('오류: ' + errMsg(e.reason)));
+
+/* ================= 서버 통신 ================= */
+/* 속도 개선 요점
+   1) 마지막 데이터를 이 기기에 저장해 두고 앱을 열자마자 바로 보여줌
+   2) 저장·입출고는 화면에 먼저 반영하고 서버 저장은 뒤에서 진행
+   3) 서버는 바뀐 물품 하나만 돌려줌 (전체 목록을 다시 받지 않음)
+   4) 자동 새로고침은 "바뀐 게 있나" 숫자 하나만 확인 */
+/* ================= 내 물품창고 코드 =================
+   링크를 연 기기마다 코드가 하나 생기고, 코드마다 물품창고가 따로라 서로 안 보입니다.
+   깃허브 주소로 열면 깃허브 페이지가 코드를 기억해 ?code= 로 넘겨줍니다. */
+const SPACE_KEY = 'inv_space';
+let space = '';
+let isOwner = false;
+function genCode() {
+  const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const r = new Uint32Array(10);
+  try { crypto.getRandomValues(r); } catch (e) { for (let i = 0; i < 10; i++) r[i] = Math.floor(Math.random() * 1e9); }
+  return Array.from(r, x => a[x % a.length]).join('');
+}
+const validCode = c => /^[A-Z0-9]{6,16}$/.test(c);
+function initSpace(cb) {
+  let called = false;
+  const done = param => {
+    if (called) return; called = true;
+    const c = String(param || '').trim().toUpperCase();
+    if (validCode(c)) { space = c; lsSet(SPACE_KEY, c); }
+    else {
+      space = String(lsGet(SPACE_KEY) || '').toUpperCase();
+      if (!validCode(space)) { space = genCode(); lsSet(SPACE_KEY, space); }
+    }
+    cb();
+  };
+  try { google.script.url.getLocation(loc => done(loc && loc.parameter && loc.parameter.code)); setTimeout(() => done(''), 1500); }
+  catch (e) { done(''); }
+}
+function tellParent(code) {
+  try { window.top.postMessage({ type: 'inv-space', code: code }, '*'); } catch (e) {}
+}
+function renderSpaceBar() {
+  const el = q1('#spaceBar'); if (!el || !space) return;
+  el.innerHTML = isOwner
+    ? '\uD83D\uDD11 내 물품창고 (주인) · <button type="button" id="spaceBtn">다른 기기에서 열기</button>'
+    : `\uD83D\uDD11 내 물품창고 코드 <b>${esc(space)}</b> · <button type="button" id="spaceBtn">다른 기기에서 열기</button>`;
+  q1('#spaceBtn').onclick = openSpace;
+}
+function openSpace() {
+  openSmall(`
+    <div class="mhead"><h2>\uD83D\uDD11 내 물품창고 코드</h2><button class="x" data-sclose>✕</button></div>
+    <div class="mbody" style="padding-top:14px">
+      ${isOwner
+        ? '<div class="hint" style="margin:0 0 10px">지금은 <b>주인 물품창고</b>예요. 다른 기기에서는 처음 받은 주인 전용 주소로 한 번 열면 돼요.</div>'
+        : `<div class="codebig">${esc(space)}</div>
+           <div class="hint" style="margin:6px 0 14px">새 폰이나 PC에서 같은 링크를 연 다음, 아래 칸에 이 코드를 넣으면 지금 물품창고가 그대로 열려요. 코드는 다른 사람에게 알려주지 마세요.</div>`}
+      <label class="fld"><span>다른 코드로 열기</span><input id="codeIn" placeholder="코드 입력" autocomplete="off" style="text-transform:uppercase"></label>
+    </div>
+    <div class="mfoot"><span class="sp"></span><button type="button" class="btn" data-sclose>닫기</button><button type="button" class="btn primary" id="codeGo">이 코드로 열기</button></div>`);
+  const go = () => {
+    const c = q1('#codeIn').value.trim().toUpperCase();
+    if (!validCode(c)) { toast('코드를 다시 확인해 주세요. (영문·숫자 6~16자)', true); return; }
+    switchSpace(c);
+  };
+  q1('#codeGo').onclick = go;
+  q1('#smallModalBox').onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); go(); } };
+}
+function switchSpace(c) {
+  closeSmall();
+  space = c; lsSet(SPACE_KEY, c); tellParent(c);
+  state.items = []; state.locs = []; state.logs = []; state.rev = -1; state.loc = 'all';
+  if (!loadCache()) render();
+  load();
+  toast('물품창고를 열었어요.');
+}
+
+const CACHE_KEY_BASE = 'inv_cache_v10_';
+function saveCache() {
+  try {
+    localStorage.setItem(CACHE_KEY_BASE + space, JSON.stringify({ items: state.items.filter(i => !i.tmp), locations: state.locs, owner: isOwner }));
+  } catch (e) {}
+}
+function loadCache() {
+  try {
+    const d = JSON.parse(localStorage.getItem(CACHE_KEY_BASE + space) || 'null');
+    if (d && Array.isArray(d.items)) { state.items = d.items; state.locs = d.locations || []; isOwner = !!d.owner; render(); renderSpaceBar(); return true; }
+  } catch (e) {}
+  return false;
+}
+
+async function load(silent) {
+  if (!silent) setBusy(1);
+  const slow = silent ? null : setTimeout(() => showErr('서버 응답이 늦어지고 있어요. 처음 실행이면 사진 폴더와 샘플을 만드느라 조금 걸릴 수 있어요.'), 20000);
+  try {
+    const d = await call('getData');
+    applyFull(d);
+    if (d.version !== APP_VERSION) {
+      showErr('서버 코드(Code.gs)가 예전 버전입니다 (서버: ' + (d.version || '구버전') + ', 화면: ' + APP_VERSION + '). Code.gs를 새 파일로 바꾼 뒤 "새 버전"으로 다시 배포해 주세요.');
+    } else hideErr();
+  } catch (e) {
+    if (!silent) showErr('데이터를 불러오지 못했어요: ' + errMsg(e) + ' — 여러 구글 계정에 로그인되어 있다면 시크릿 창에서 주소를 열어보세요.');
+  } finally { clearTimeout(slow); if (!silent) setBusy(-1); }
+}
+/* 서버 함수 실행 → 성공하면 받은 결과, 실패하면 null (실패 시 서버 데이터로 되돌림) */
+async function mutate(fn, args, okMsg) {
+  setBusy(1);
+  try { const d = await call(fn, ...args); applyPatch(d); if (okMsg) toast(okMsg); return d || {}; }
+  catch (e) {
+    if (/ADMIN_REQUIRED/.test(errMsg(e))) adminExpired(); else toast(errMsg(e), true);
+    setTimeout(() => load(true), 0); return null;
+  }
+  finally { setBusy(-1); }
+}
+function applyFull(d) {
+  if (!d || !Array.isArray(d.items)) throw new Error('서버에서 데이터를 받지 못했습니다.');
+  state.items = d.items.map(it => { const x = Object.assign({}, it); if (pending[x.id]) x.qty += pending[x.id]; return x; });
+  state.locs = d.locations || [];
+  state.rev = Number(d.rev || 0); state.lastSync = new Date();
+  isOwner = !!d.owner; renderSpaceBar();
+  if (state.loc !== 'all' && state.loc !== NONE && !locById(state.loc)) state.loc = 'all';
+  render(); saveCache();
+  if (!q1('#drawer').classList.contains('hidden')) refreshLogs();
+  fillThumbs();
+}
+function applyPatch(d) {
+  if (!d) return;
+  if (d.full) { applyFull(d); return; }
+  const missed = state.rev >= 0 && d.rev && d.rev !== state.rev + 1 && busy <= 1;
+  if (d.item) upsertItem(d.item, d.tempId);
+  if (d.removedId) state.items = state.items.filter(i => i.id !== d.removedId);
+  if (d.locations) state.locs = d.locations;
+  if (d.rev) state.rev = Math.max(state.rev, Number(d.rev));
+  state.lastSync = new Date();
+  render(); saveCache();
+  if (!q1('#drawer').classList.contains('hidden')) refreshLogs();
+  if (missed) setTimeout(() => { if (!isEditing() && busy === 0) load(true); }, 300); /* 그 사이 다른 사람이 바꿈 */
+}
+function upsertItem(item, tempId) {
+  const x = Object.assign({}, item);
+  if (pending[x.id]) x.qty += pending[x.id];
+  const idx = state.items.findIndex(i => i.id === x.id || (tempId && i.id === tempId));
+  if (idx >= 0) state.items[idx] = x; else state.items.push(x);
+}
+
+/* 자동 새로고침: 숫자 하나(변경 번호)만 확인하고, 바뀌었을 때만 전체를 받음 */
+async function checkRev() {
+  if (document.hidden || isEditing() || busy > 0) return;
+  try {
+    const r = await call('getRev');
+    if (Number(r) !== state.rev) load(true);
+    else { state.lastSync = new Date(); renderSync(); }
+  } catch (e) {}
+}
+
+/* ================= 도우미 ================= */
+const locById = id => state.locs.find(l => l.id === id);
+const locName = id => (locById(id) || {}).name || '장소 미지정';
+const unitOf = it => it.unit || '개';
+const countIn = id => state.items.filter(i => i.locationId === id).length;
+function stat(it) { if (it.qty <= 0) return 'out'; if (it.minQty > 0 && it.qty <= it.minQty) return 'low'; return 'ok'; }
+const STAT_LABEL = { ok: '충분', low: '재고 부족', out: '품절' };
+const byName = (a, b) => a.name.localeCompare(b.name, 'ko');
+
+function visibleItems() {
+  const q = state.q.toLowerCase();
+  return state.items.filter(it => {
+    if (state.lowOnly && stat(it) === 'ok') return false;
+    if (state.loc === NONE && locById(it.locationId)) return false;
+    if (state.loc !== 'all' && state.loc !== NONE && it.locationId !== state.loc) return false;
+    if (q && !(it.name + ' ' + it.tags + ' ' + it.notes + ' ' + locName(it.locationId)).toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+/* 작은 사진(썸네일)이 있으면 그걸 바로 표시 → 드라이브에 다녀오지 않아 즉시 뜸 */
+function photoHtml(it, size) {
+  if (it && it.thumb) return `<img src="${esc(it.thumb)}" alt="">`;
+  return imgTag(it ? it.imageId : '', size);
+}
+function imgTag(id, size) {
+  if (!id) return `<div class="noimg"><b>${E.cam}</b>${size === 'sm' ? '' : '사진 없음'}</div>`;
+  const src = imgCache.get(id) || (DRIVE_THUMB + encodeURIComponent(id) + '&sz=w400');
+  return `<img loading="lazy" referrerpolicy="no-referrer" src="${esc(src)}" data-img="${esc(id)}" alt="">`;
+}
+
+/* 드라이브 썸네일이 안 열리면 서버에서 직접 받아 표시 */
+document.addEventListener('error', async e => {
+  const img = e.target;
+  if (!img || img.tagName !== 'IMG' || !img.dataset.img || img.dataset.fb) return;
+  img.dataset.fb = '1';
+  const id = img.dataset.img;
+  try {
+    const data = imgCache.get(id) || await call('getImageData', id);
+    imgCache.set(id, data);
+    qa('img[data-img]').forEach(el => { if (el.dataset.img === id) { el.dataset.fb = '1'; el.src = data; } });
+  } catch (err) { img.outerHTML = `<div class="noimg"><b>${E.cam}</b></div>`; }
+}, true);
+
+/* ================= 렌더링 ================= */
+function render() {
+  renderStats();
+  renderChips();
+  if (state.view === 'table') renderTable(); else renderSections();
+  q1('#lowBtn').classList.toggle('on', state.lowOnly);
+  renderSync();
+}
+function renderSync() {
+  q1('#syncTxt').innerHTML = state.lastSync
+    ? '마지막 업데이트 ' + state.lastSync.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) + '<span class="auto"> · 30초마다 자동 새로고침</span> · ' + APP_VERSION
+    : '불러오는 중… · ' + APP_VERSION;
+}
+
+function renderStats() {
+  const low = state.items.filter(i => stat(i) === 'low').length;
+  const out = state.items.filter(i => stat(i) === 'out').length;
+  q1('#stats').innerHTML = `
+    <div class="stat"><div class="k">전체 물품</div><div class="v">${state.items.length}<small>종</small></div></div>
+    <div class="stat"><div class="k">보관 장소</div><div class="v">${state.locs.length}<small>곳</small></div></div>
+    <button class="stat low click" data-lowjump><div class="k">⚠\uFE0F 재고 부족</div><div class="v">${low}<small>종</small></div></button>
+    <button class="stat out click" data-lowjump><div class="k">⛔ 품절</div><div class="v">${out}<small>종</small></div></button>`;
+}
+
+function renderChips() {
+  const unassigned = state.items.filter(i => !locById(i.locationId)).length;
+  const chips = [`<button class="lchip ${state.loc === 'all' ? 'on' : ''}" data-loc="all">전체<span class="n">${state.items.length}</span></button>`]
+    .concat(state.locs.map(l => `<button class="lchip ${state.loc === l.id ? 'on' : ''}" data-loc="${esc(l.id)}">${esc(l.name)}<span class="n">${countIn(l.id)}</span></button>`));
+  if (unassigned) chips.push(`<button class="lchip ${state.loc === NONE ? 'on' : ''}" data-loc="${NONE}">장소 미지정<span class="n">${unassigned}</span></button>`);
+  if (isAdm()) chips.push('<button class="lchip add" data-newloc>+ 장소 추가</button>');
+  q1('#locChips').innerHTML = chips.join('');
+}
+
+function itemCard(it) {
+  const st = stat(it);
+  return `<article class="card st-${st}" data-id="${esc(it.id)}">
+    <div class="photo">${photoHtml(it)}<span class="status ${st}">${STAT_LABEL[st]}</span><span class="editmark">✏\uFE0F 눌러서 편집</span><button type="button" class="snap" data-snap title="카메라로 사진 찍기" aria-label="카메라로 사진 찍기">${E.cam}</button></div>
+    <div class="cbody">
+      <div><h3 class="iname" title="${esc(it.name)}">${esc(it.name)}</h3>
+        ${it.tags ? `<div class="itags">${esc(it.tags)}</div>` : ''}</div>
+      <dl class="fields">
+        <div class="f"><dt>수량</dt><dd><div class="qline">
+          <span class="qnum ${st}">${it.qty.toLocaleString()}</span><span class="qunit">${esc(unitOf(it))}</span>
+          ${it.minQty ? `<span class="qmin">최소 ${it.minQty}${esc(unitOf(it))}</span>` : ''}
+        </div></dd></div>
+        <div class="f"><dt>장소</dt><dd class="locname">${E.pin} ${esc(locName(it.locationId))}</dd></div>
+      </dl>
+      <div class="qbtns">
+        <button class="qbtn minus" data-q="-1" title="1개 출고">− 출고</button>
+        <button class="qbtn plus" data-q="1" title="1개 입고">+ 입고</button>
+      </div>
+    </div>
+  </article>`;
+}
+
+/* 장소마다 붙는 "빠른 등록" 타일: 이름·수량만 적고 Enter */
+function quickTile(locId) {
+  return `<form class="qadd" data-loc="${esc(locId)}" autocomplete="off">
+    <div class="qadd-t">+ 빠른 등록</div>
+    <div class="qadd-s">이름·수량만 적고 Enter</div>
+    <input name="n" placeholder="물품 이름" aria-label="물품 이름">
+    <div class="qadd-r">
+      <input name="q" type="number" min="0" inputmode="numeric" value="1" aria-label="수량">
+      <input name="u" list="unitList" value="개" aria-label="단위">
+    </div>
+    <div class="qadd-r">
+      <button type="submit" class="btn primary sm">추가</button>
+      <button type="button" class="btn sm" data-snapadd="${esc(locId)}">${E.cam} 찍고 등록</button>
+    </div>
+    <button type="button" class="linkbtn" data-addin="${esc(locId)}">사진·상세까지 입력 →</button>
+  </form>`;
+}
+
+/* 다시 그릴 때 빠른 등록 칸에 쓰던 글자와 커서를 지켜줌 */
+function snapQuick() {
+  const keep = {}; const ae = document.activeElement;
+  qa('#content form.qadd').forEach(f => {
+    keep[f.dataset.loc] = { n: f.elements.n.value, q: f.elements.q.value, u: f.elements.u.value, focus: f.contains(ae) ? ae.name : '' };
+  });
+  return keep;
+}
+function restoreQuick(keep) {
+  qa('#content form.qadd').forEach(f => {
+    const k = keep[f.dataset.loc]; if (!k) return;
+    f.elements.n.value = k.n; f.elements.q.value = k.q; f.elements.u.value = k.u;
+    if (k.focus && f.elements[k.focus]) f.elements[k.focus].focus();
+  });
+}
+
+function renderSections() {
+  const keep = snapQuick();
+  const items = visibleItems();
+  const filtering = !!state.q || state.lowOnly;
+  const groups = state.locs.map(l => ({ loc: l, items: items.filter(i => i.locationId === l.id).sort(byName) }));
+  const orphan = items.filter(i => !locById(i.locationId)).sort(byName);
+  if (orphan.length) groups.push({ loc: { id: NONE, name: '장소 미지정', memo: '' }, items: orphan });
+
+  const shown = groups.filter(g => (state.loc === 'all' || g.loc.id === state.loc) && (!filtering || g.items.length));
+  if (!shown.length) { q1('#content').innerHTML = emptyHtml(filtering); return; }
+
+  q1('#content').innerHTML = shown.map(g => {
+    const all = state.items.filter(i => g.loc.id === NONE ? !locById(i.locationId) : i.locationId === g.loc.id);
+    const low = all.filter(i => stat(i) !== 'ok').length;
+    const real = g.loc.id !== NONE;
+    return `<section class="loc">
+      <div class="loc-head">
+        <span class="pin">${E.pin}</span><h2>${esc(g.loc.name)}</h2>
+        <span class="loc-meta">물품 ${all.length}종</span>
+        ${low ? `<span class="pill low">부족 ${low}</span>` : ''}
+        <div class="loc-actions">
+          ${real && isAdm() ? `<button class="btn sm" data-locedit="${esc(g.loc.id)}">✏\uFE0F 장소 편집</button>` : ''}
+        </div>
+        ${g.loc.memo ? `<div class="loc-memo">${esc(g.loc.memo)}</div>` : ''}
+      </div>
+      <div class="cards">${g.items.map(itemCard).join('')}${filtering ? '' : quickTile(g.loc.id)}</div>
+    </section>`;
+  }).join('');
+  restoreQuick(keep);
+}
+
+function renderTable() {
+  const order = new Map(state.locs.map((l, i) => [l.id, i]));
+  const items = visibleItems().sort((a, b) =>
+    (order.has(a.locationId) ? order.get(a.locationId) : 999) - (order.has(b.locationId) ? order.get(b.locationId) : 999) || byName(a, b));
+  if (!items.length) { q1('#content').innerHTML = emptyHtml(!!state.q || state.lowOnly); return; }
+  q1('#content').innerHTML = `<div class="tablewrap"><table>
+    <thead><tr><th>사진</th><th>물품명</th><th>수량</th><th>보관 장소</th><th>상태</th>${isAdm() ? '<th></th>' : ''}</tr></thead>
+    <tbody>${items.map(it => {
+      const st = stat(it);
+      return `<tr class="row" data-id="${esc(it.id)}">
+        <td><div class="tthumb">${photoHtml(it, 'sm')}</div></td>
+        <td><div class="tname">${esc(it.name)}</div>${it.tags ? `<div class="l2">${esc(it.tags)}</div>` : ''}</td>
+        <td><div class="tq">
+          <button class="qbtn minus" data-q="-1" title="1개 출고">−</button>
+          <span class="qnum ${st}">${it.qty.toLocaleString()}</span><span class="qunit">${esc(unitOf(it))}</span>
+          <button class="qbtn plus" data-q="1" title="1개 입고">+</button>
+        </div></td>
+        <td>${E.pin} ${esc(locName(it.locationId))}</td>
+        <td><span class="badge ${st}">${STAT_LABEL[st]}</span></td>
+        ${isAdm() ? '<td><button type="button" class="btn sm danger" data-del title="삭제">삭제</button></td>' : ''}
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function emptyHtml(filtering) {
+  if (filtering) return `<div class="empty"><div class="big">${E.find}</div>${state.lowOnly && !state.q ? '재고가 부족한 물품이 없어요. ' + E.good : '찾는 물품이 없어요.'}</div>`;
+  if (!state.locs.length) return `<div class="empty"><div class="big">${E.pin}</div>먼저 <b>+ 장소 추가</b>로 보관 장소를 만들어 보세요.</div>`;
+  return `<div class="empty"><div class="big">${E.box}</div>아직 물품이 없어요. <b>+ 물품 등록</b>으로 시작하세요.</div>`;
+}
+
+/* ================= 메인 화면 이벤트 ================= */
+q1('#content').addEventListener('click', e => {
+  const snapAdd = e.target.closest('[data-snapadd]');
+  if (snapAdd) {
+    const f = snapAdd.closest('form.qadd');
+    camTarget = {
+      type: 'new', loc: snapAdd.dataset.snapadd === NONE ? '' : snapAdd.dataset.snapadd,
+      preset: { name: f.elements.n.value.trim(), qty: toInt(f.elements.q.value), unit: f.elements.u.value.trim() }
+    };
+    q1('#camGlobal').click(); return;
+  }
+  if (e.target.closest('form.qadd') && !e.target.closest('[data-addin]')) return;
+  const snap = e.target.closest('[data-snap]');
+  if (snap) { e.stopPropagation(); camTarget = { type: 'item', id: snap.closest('[data-id]').dataset.id }; q1('#camGlobal').click(); return; }
+  const qb = e.target.closest('[data-q]');
+  if (qb) { e.stopPropagation(); quickAdjust(qb.closest('[data-id]').dataset.id, Number(qb.dataset.q)); return; }
+  const add = e.target.closest('[data-addin]');
+  if (add) {
+    const f = add.closest('form.qadd');
+    const loc = add.dataset.addin === NONE ? '' : add.dataset.addin;
+    openItem(null, loc, f ? { name: f.elements.n.value.trim(), qty: toInt(f.elements.q.value), unit: f.elements.u.value.trim() } : null);
+    return;
+  }
+  const del = e.target.closest('[data-del]');
+  if (del) { e.stopPropagation(); confirmDelete(del.closest('[data-id]').dataset.id); return; }
+  const le = e.target.closest('[data-locedit]');
+  if (le) { openLoc(le.dataset.locedit); return; }
+  const card = e.target.closest('[data-id]');
+  if (card) openItem(card.dataset.id);
+});
+
+q1('#content').addEventListener('submit', async e => {
+  const f = e.target.closest('form.qadd'); if (!f) return;
+  e.preventDefault();
+  const name = f.elements.n.value.trim();
+  if (!name) { toast('물품 이름을 입력하세요.', true); f.elements.n.focus(); return; }
+  const qty = toInt(f.elements.q.value);
+  if (qty < 0) { toast('수량은 0 이상으로 입력하세요.', true); return; }
+  const locKey = f.dataset.loc;
+  const tempId = 'tmp-' + Date.now();
+  const unit = f.elements.u.value.trim() || '개';
+  /* 화면에 먼저 추가하고, 칸을 비워 다음 물품을 바로 적을 수 있게 함 */
+  state.items.push({ id: tempId, tmp: true, name: name, locationId: locKey === NONE ? '' : locKey, qty: qty, unit: unit, minQty: 0, tags: '', notes: '', imageId: '', thumb: '' });
+  f.reset();
+  render();
+  const nf = qa('#content form.qadd').find(x => x.dataset.loc === locKey);
+  if (nf) nf.elements.n.focus();
+  await mutate('saveItem', [{
+    tempId: tempId, name: name, locationId: locKey === NONE ? '' : locKey, qty: qty, unit: unit,
+    minQty: 0, tags: '', notes: '', user: state.user
+  }], `"${name}" 등록했습니다.`);
+});
+
+q1('#locChips').addEventListener('click', e => {
+  if (e.target.closest('[data-newloc]')) { openLoc(null); return; }
+  const c = e.target.closest('[data-loc]');
+  if (c) { state.loc = c.dataset.loc; render(); }
+});
+q1('#stats').addEventListener('click', e => { if (e.target.closest('[data-lowjump]')) { state.lowOnly = true; state.loc = 'all'; render(); } });
+q1('#lowBtn').onclick = () => { state.lowOnly = !state.lowOnly; render(); };
+q1('#viewSeg').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  state.view = b.dataset.v; lsSet('inv_view', state.view);
+  qa('#viewSeg button').forEach(x => x.classList.toggle('on', x === b));
+  render();
+};
+let searchTimer;
+q1('#search').addEventListener('input', e => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { state.q = e.target.value.trim(); render(); }, 150); });
+q1('#refreshBtn').onclick = () => load();
+q1('#errRetry').onclick = () => { hideErr(); load(); };
+q1('#newItemBtn').onclick = () => openItem(null);
+q1('#fab').onclick = () => openItem(null);
+q1('#mgrBtn').onclick = () => { if (isAdm()) openMgr(); else askAdmin(openMgr); };
+
+/* ================= 카메라 (카드의 사진 버튼 / 빠른 등록의 "찍고 등록") ================= */
+let camTarget = null;
+q1('#camGlobal').addEventListener('change', async e => {
+  const file = e.target.files[0]; e.target.value = '';
+  const t = camTarget; camTarget = null;
+  if (!file || !t) return;
+  let data;
+  try { data = await resizeImage(file, 1000); } catch (err) { toast(errMsg(err), true); return; }
+
+  if (t.type === 'new') {
+    /* 사진을 넣은 채로 등록 창을 열어 이름만 적으면 되게 함 */
+    openItem(null, t.loc, Object.assign({}, t.preset, { image: data }));
+    if (!t.preset.name) toast('사진이 들어갔어요. 이름을 적고 등록하세요.');
+    return;
+  }
+  const it = state.items.find(x => x.id === t.id); if (!it) return;
+  if (it.tmp) { toast('저장 중이에요. 잠시 후 다시 해주세요.'); return; }
+  const thumb = await makeThumb(data);
+  if (!thumb) { toast('사진을 처리하지 못했어요. 다시 찍어 주세요.', true); return; }
+  it.thumb = thumb; render();   /* 찍은 사진을 바로 보여주고 */
+  const r = await mutate('saveItem', [{
+    id: it.id, name: it.name, locationId: it.locationId, qty: it.qty - (pending[it.id] || 0), qtyBase: it.qty - (pending[it.id] || 0),
+    unit: it.unit, minQty: it.minQty, tags: it.tags, notes: it.notes, photoPending: true, thumb: thumb, user: state.user
+  }], `${it.name} 사진을 저장했습니다.`);
+  if (r && r.item) attachLater(r.item.id, data);   /* 원본은 뒤에서 조용히 */
+});
+
+/* 원본 사진은 화면과 상관없이 뒤에서 올림 (작은 사진은 이미 저장돼 바로 보임) */
+async function attachLater(itemId, dataUrl) {
+  try { const d = await call('attachImage', itemId, dataUrl); applyPatch(d); }
+  catch (e) { toast('원본 사진 업로드는 실패했어요. (화면용 사진은 저장됨)', true); }
+}
+
+/* 입고/출고 버튼: 화면은 즉시 바뀌고, 연속으로 누르면 0.6초 뒤 합쳐서 한 번만 저장 */
+function quickAdjust(id, d) {
+  const it = state.items.find(x => x.id === id); if (!it) return;
+  if (it.tmp) { toast('저장 중이에요. 잠시 후 다시 눌러주세요.'); return; }
+  if (it.qty + d < 0) { toast('재고가 0' + unitOf(it) + '입니다.', true); return; }
+  it.qty += d;
+  pending[id] = (pending[id] || 0) + d;
+  render();
+  clearTimeout(pendTimer[id]);
+  pendTimer[id] = setTimeout(() => flushAdjust(id), 600);
+}
+async function flushAdjust(id) {
+  clearTimeout(pendTimer[id]); delete pendTimer[id];
+  const d = pending[id]; delete pending[id];
+  if (!d) return;
+  const it = state.items.find(x => x.id === id);
+  const r = await mutate('adjustQty', [id, d, '빠른 조정', state.user]);
+  if (r && it) toast(`${it.name} ${d > 0 ? '입고 +' + d : '출고 ' + d}${unitOf(it)} 저장됨`);
+}
+function flushAll() { Object.keys(pending).forEach(flushAdjust); }
+window.addEventListener('pagehide', flushAll);
+
+/* 삭제 (편집 창·표 보기 공용): 화면에서 먼저 지우고 서버 삭제는 뒤에서 */
+async function confirmDelete(id) {
+  const it = state.items.find(x => x.id === id); if (!it) return;
+  if (it.tmp) { toast('저장 중이에요. 잠시 후 다시 해주세요.'); return; }
+  if (!await ask(`"${it.name}"을(를) 삭제할까요? 사진과 함께 지워집니다.`, '삭제')) return;
+  delete pending[id]; clearTimeout(pendTimer[id]);
+  state.items = state.items.filter(x => x.id !== id);
+  if (modal && modal.id === id) closeItem();
+  render();
+  await mutate('deleteItem', [id, state.user, admToken], '삭제했습니다.');
+}
+
+/* ================= 물품 창 (등록 / 수정) ================= */
+function locPills(selected) {
+  const opts = state.locs.map(l => ({ id: l.id, name: l.name })).concat([{ id: '', name: '장소 미지정' }]);
+  return opts.map(o => `<button type="button" class="lpick ${o.id === selected ? 'on' : ''}" data-pick="${esc(o.id)}">${o.id ? E.pin + ' ' : ''}${esc(o.name)}</button>`).join('')
+    + (isAdm() ? '<button type="button" class="lpick new" data-newlocpill>+ 새 장소</button>' : '');
+}
+
+/* id: 수정할 물품 / presetLoc: 새 물품의 기본 장소 / preset: 새 물품 미리 채울 값(복제·빠른 등록에서 넘어옴) */
+function openItem(id, presetLoc, preset) {
+  const cur = id ? state.items.find(x => x.id === id) : null;
+  if (id && !cur) return;
+  if (cur && cur.tmp) { toast('저장 중이에요. 잠시 후 다시 열어주세요.'); return; }
+  const defLoc = presetLoc != null ? presetLoc
+    : (state.loc !== 'all' && state.loc !== NONE ? state.loc : (state.locs[0] ? state.locs[0].id : ''));
+  const it = cur ? Object.assign({}, cur)
+    : Object.assign({ name: '', locationId: defLoc, qty: 0, unit: '개', minQty: 0, tags: '', notes: '', imageId: '' }, preset || {});
+  if (!it.unit) it.unit = '개';
+  const st = stat(it);
+  modal = { id: id || null, base: cur ? cur.qty : 0, newImage: null, removeImage: false, hasImage: !!(cur && cur.imageId), locationId: locById(it.locationId) ? it.locationId : '' };
+
+  const box = q1('#itemModalBox');
+  box.innerHTML = `
+    <div class="mhead"><h2>${id ? '✏\uFE0F ' + esc(it.name) : '+ 새 물품 등록'}</h2><button class="x" data-close>✕</button></div>
+    <div class="mbody">
+      <section class="msec"><h3>${E.cam} 사진 <small>(눌러서 선택 · 끌어다 놓기 · 휴대폰은 촬영)</small></h3>
+        <div class="mphoto" id="photoBox">${photoHtml(it)}</div>
+        <div class="rowbtns">
+          <label class="btn sm primary">${E.cam} 카메라로 찍기<input type="file" accept="image/*" capture="environment" id="camIn" hidden></label>
+          <label class="btn sm">${E.album} 앨범에서 선택<input type="file" accept="image/*" id="fileIn" hidden></label>
+          <button type="button" class="btn sm ${it.imageId || (preset && preset.image) ? '' : 'hidden'}" id="rmImg">사진 지우기</button>
+        </div>
+      </section>
+
+      <section class="msec"><h3>${E.memo} 물품 이름</h3>
+        <div class="fld"><input id="fName" class="bigname" value="${esc(it.name)}" placeholder="예: A4 복사용지" autocomplete="off"></div>
+      </section>
+
+      <section class="msec"><h3>${E.num} 수량 ${id ? '<small>(바꾼 만큼 입고/출고로 기록됩니다)</small>' : ''}</h3>
+        <div class="stepper">
+          <button type="button" class="stp m" data-step="-1" aria-label="1 빼기">−</button>
+          <input id="fQty" type="number" min="0" inputmode="numeric" value="${it.qty}" aria-label="수량">
+          <button type="button" class="stp p" data-step="1" aria-label="1 더하기">+</button>
+          <span class="stp-unit" id="qUnitLbl">${esc(unitOf(it))}</span>
+          <span class="badge ${st}" id="qBadge">${STAT_LABEL[st]}</span>
+        </div>
+        <div class="quicksteps">
+          <button type="button" data-step="-10">−10</button><button type="button" data-step="-5">−5</button>
+          <button type="button" data-step="5">+5</button><button type="button" data-step="10">+10</button>
+        </div>
+        ${id ? `<div class="qdiff" id="qDiff"></div>
+          <label class="fld hidden" id="qNoteWrap"><span>입고·출고 메모 (선택)</span><input id="fQtyNote" placeholder="예: 거래처, 사용처, 사용한 사람"></label>` : ''}
+        <div class="two">
+          <label class="fld"><span>단위</span><input id="fUnit" list="unitList" value="${esc(unitOf(it))}"></label>
+          <label class="fld"><span>최소 수량 (이하이면 '재고 부족')</span><input id="fMin" type="number" min="0" inputmode="numeric" value="${it.minQty}"></label>
+        </div>
+      </section>
+
+      <section class="msec"><h3>${E.pin} 보관 장소</h3>
+        <div class="pills" id="locPills">${locPills(modal.locationId)}</div>
+        <div class="newloc hidden" id="newLocRow">
+          <input id="newLocName" placeholder="새 장소 이름 (예: 창고 C)" autocomplete="off">
+          <button type="button" class="btn sm primary" id="newLocAdd">추가</button>
+          <button type="button" class="btn sm" id="newLocCancel">취소</button>
+        </div>
+      </section>
+
+      <section class="msec"><h3>${E.tag} 태그 · 메모 <small>(선택)</small></h3>
+        <label class="fld"><span>태그 (쉼표로 구분)</span><input id="fTags" value="${esc(it.tags)}" placeholder="예: 사무용품, 소모품"></label>
+        <label class="fld"><span>메모</span><textarea id="fNotes" placeholder="규격, 구매처 등">${esc(it.notes)}</textarea></label>
+      </section>
+
+      ${id && isAdm() ? `<section class="msec"><h3>${E.clock} 변경 이력 <small>(관리자)</small></h3><div class="logs" id="itemLogs"><div class="l2">불러오는 중…</div></div></section>` : ''}
+    </div>
+    <div class="mfoot">
+      ${id ? (isAdm() ? '<button type="button" class="btn danger" id="delItem">삭제</button>' : '') + '<button type="button" class="btn" id="copyItem">복제</button>' : ''}
+      <span class="sp"></span>
+      <button type="button" class="btn" data-close>닫기</button>
+      <button type="button" class="btn primary" id="saveItem">${id ? '변경 저장' : '등록하기'}</button>
+    </div>`;
+  q1('#itemModal').classList.remove('hidden');
+  if (!id) setTimeout(() => { const n = q1('#fName'); n.focus(); n.select(); }, 50);
+
+  /* 수량 */
+  const qtyIn = q1('#fQty');
+  const refreshQty = () => {
+    const v = Math.max(0, toInt(qtyIn.value));
+    const s = stat({ qty: v, minQty: toInt(q1('#fMin').value) });
+    const b = q1('#qBadge'); b.className = 'badge ' + s; b.textContent = STAT_LABEL[s];
+    q1('#qUnitLbl').textContent = q1('#fUnit').value.trim() || '개';
+    if (!id) return;
+    const d = v - modal.base;
+    const diff = q1('#qDiff');
+    diff.classList.toggle('on', d !== 0);
+    diff.innerHTML = d === 0 ? '수량 변화 없음'
+      : `${modal.base} → <b>${v}</b> <span class="${d > 0 ? 'pos' : 'neg'}">(${d > 0 ? '입고 +' + d : '출고 ' + d})</span> · 저장하면 기록됩니다`;
+    q1('#qNoteWrap').classList.toggle('hidden', d === 0);
+  };
+  box.querySelectorAll('[data-step]').forEach(b => {
+    b.onclick = () => { qtyIn.value = Math.max(0, toInt(qtyIn.value) + Number(b.dataset.step)); refreshQty(); };
+  });
+  qtyIn.oninput = refreshQty; q1('#fMin').oninput = refreshQty; q1('#fUnit').oninput = refreshQty;
+  refreshQty();
+
+  /* 장소 선택 + 새 장소 바로 만들기 */
+  q1('#locPills').onclick = e => {
+    if (e.target.closest('[data-newlocpill]')) { q1('#newLocRow').classList.remove('hidden'); q1('#newLocName').focus(); return; }
+    const p = e.target.closest('[data-pick]'); if (!p) return;
+    modal.locationId = p.dataset.pick;
+    box.querySelectorAll('.lpick').forEach(x => x.classList.toggle('on', x === p));
+  };
+  const addNewLoc = async () => {
+    const name = q1('#newLocName').value.trim();
+    if (!name) { toast('장소 이름을 입력하세요.', true); return; }
+    const d = await mutate('saveLocation', [{ name: name, memo: '', token: admToken }], `"${name}" 장소를 만들었습니다.`);
+    if (!d || !modal || !q1('#locPills')) return;
+    modal.locationId = d.savedId;
+    q1('#locPills').innerHTML = locPills(modal.locationId);
+    q1('#newLocName').value = ''; q1('#newLocRow').classList.add('hidden');
+  };
+  q1('#newLocAdd').onclick = addNewLoc;
+  q1('#newLocCancel').onclick = () => { q1('#newLocName').value = ''; q1('#newLocRow').classList.add('hidden'); };
+
+  /* 사진 */
+  const setPhoto = async file => {
+    if (!file || !/^image/.test(file.type)) { toast('이미지 파일을 선택하세요.', true); return; }
+    try {
+      modal.newImage = await resizeImage(file, 1000); modal.removeImage = false;
+      q1('#photoBox').innerHTML = `<img src="${modal.newImage}" alt="">`;
+      q1('#rmImg').classList.remove('hidden');
+    } catch (err) { toast(errMsg(err), true); }
+  };
+  const pb = q1('#photoBox');
+  pb.onclick = () => q1('#camIn').click();
+  q1('#camIn').onchange = e => { setPhoto(e.target.files[0]); e.target.value = ''; };
+  if (preset && preset.image) {
+    modal.newImage = preset.image;
+    pb.innerHTML = `<img src="${preset.image}" alt="">`;
+  }
+  pb.ondragover = e => { e.preventDefault(); pb.classList.add('drag'); };
+  pb.ondragleave = () => pb.classList.remove('drag');
+  pb.ondrop = e => { e.preventDefault(); pb.classList.remove('drag'); setPhoto(e.dataTransfer.files[0]); };
+  q1('#fileIn').onchange = e => { setPhoto(e.target.files[0]); e.target.value = ''; };
+  q1('#rmImg').onclick = () => {
+    modal.newImage = null; modal.removeImage = modal.hasImage;
+    q1('#photoBox').innerHTML = imgTag('');
+    q1('#rmImg').classList.add('hidden');
+  };
+
+  /* Enter 로 저장 (한글 입력 중에는 무시) */
+  box.onkeydown = e => {
+    if (e.key !== 'Enter' || e.isComposing || e.target.tagName !== 'INPUT') return;
+    e.preventDefault();
+    if (e.target.id === 'newLocName') addNewLoc(); else saveCurrentItem();
+  };
+
+  q1('#saveItem').onclick = saveCurrentItem;
+  if (id) {
+    if (q1('#delItem')) q1('#delItem').onclick = () => confirmDelete(id);
+    if (cur.imageId) upgradePhoto(cur);
+    q1('#copyItem').onclick = () => {
+      openItem(null, it.locationId, { name: it.name + ' (복사)', qty: 0, unit: it.unit, minQty: it.minQty, tags: it.tags, notes: it.notes, locationId: it.locationId });
+      toast('복제했습니다. 이름과 수량을 확인하고 등록하세요.');
+    };
+    if (isAdm()) loadItemLogs(id);
+  }
+}
+
+async function saveCurrentItem() {
+  if (!modal) return;
+  const name = q1('#fName').value.trim();
+  if (!name) { toast('물품 이름을 입력하세요.', true); q1('#fName').focus(); return; }
+  const qty = toInt(q1('#fQty').value);
+  if (qty < 0) { toast('수량은 0 이상으로 입력하세요.', true); return; }
+  const m = modal;
+  const btn = q1('#saveItem'); btn.disabled = true;
+  const noteEl = q1('#fQtyNote');
+  const thumb = m.newImage ? await makeThumb(m.newImage) : '';
+  const tempId = m.id ? '' : 'tmp-' + Date.now();
+  const payload = {
+    id: m.id, tempId: tempId, name: name, locationId: m.locationId,
+    qty: qty, qtyBase: m.base, qtyNote: noteEl ? noteEl.value.trim() : '',
+    unit: q1('#fUnit').value, minQty: q1('#fMin').value,
+    tags: q1('#fTags').value, notes: q1('#fNotes').value,
+    photoPending: !!(m.newImage && thumb), image: (m.newImage && !thumb) ? m.newImage : null,
+    thumb: thumb, removeImage: m.removeImage, user: state.user
+  };
+  /* 화면에 먼저 반영하고 창을 바로 닫음 (서버 저장·사진 업로드는 뒤에서) */
+  const prev = m.id ? state.items.find(i => i.id === m.id) : null;
+  if (m.id && !prev) { closeItem(); return; }
+  const local = Object.assign({}, prev || {}, {
+    id: m.id || tempId, tmp: !m.id, name: name, locationId: m.locationId,
+    qty: prev ? Math.max(0, prev.qty + (qty - m.base)) : qty,
+    unit: String(payload.unit).trim() || '개', minQty: Math.max(0, toInt(payload.minQty)),
+    tags: String(payload.tags).split(/[,，]/).map(x => x.trim()).filter(Boolean).join(', '),
+    notes: String(payload.notes).trim(),
+    imageId: m.newImage ? 'uploading' : (m.removeImage ? '' : (prev ? prev.imageId : '')),
+    thumb: m.newImage ? (thumb || m.newImage) : (m.removeImage ? '' : (prev ? prev.thumb : ''))
+  });
+  upsertItem(local, '');
+  if (pending[local.id]) { const i = state.items.find(x => x.id === local.id); if (i) i.qty -= pending[local.id]; }
+  closeItem();
+  render();
+  const r = await mutate('saveItem', [payload], m.id ? '저장했습니다.' : `"${name}" 등록했습니다.`);
+  if (r && r.item && payload.photoPending) attachLater(r.item.id, m.newImage);
+}
+
+/* 편집 창: 작은 사진을 먼저 보여주고, 큰 사진이 준비되면 바꿔 끼움 */
+function upgradePhoto(it) {
+  const im = new Image();
+  im.referrerPolicy = 'no-referrer';
+  im.onload = () => {
+    if (!modal || modal.id !== it.id || modal.newImage || modal.removeImage) return;
+    const pb = q1('#photoBox'); if (pb) pb.innerHTML = `<img src="${esc(im.src)}" alt="">`;
+  };
+  im.src = DRIVE_THUMB + encodeURIComponent(it.imageId) + '&sz=w1000';
+}
+
+/* 작은 사진(썸네일) 만들기: 시트 한 칸에 들어가도록 45KB 이하로 */
+function makeThumb(src) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => {
+      let size = 360, q = 0.72, out = '';
+      for (let i = 0; i < 6; i++) {
+        const s = Math.min(1, size / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * s)), h = Math.max(1, Math.round(img.height * s));
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
+        try { out = c.toDataURL('image/jpeg', q); } catch (e) { res(''); return; }
+        if (out.length <= 45000) break;
+        size = Math.round(size * 0.8); q = Math.max(0.5, q - 0.06);
+      }
+      res(out.length <= 45000 ? out : '');
+    };
+    img.onerror = () => res('');
+    img.src = src;
+  });
+}
+
+/* 예전에 올린 사진은 작은 사진이 없으니, 한 번씩 만들어서 저장해 둠 (다음부터 즉시 뜸) */
+let thumbJob = false;
+async function fillThumbs() {
+  if (thumbJob) return;
+  const todo = state.items.filter(i => i.imageId && !i.thumb && !i.tmp && i.imageId !== 'uploading').map(i => i.id);
+  if (!todo.length) return;
+  thumbJob = true;
+  try {
+    for (const id of todo) {
+      const it = state.items.find(x => x.id === id); if (!it || it.thumb) continue;
+      let data;
+      try { data = imgCache.get(it.imageId) || await call('getImageData', it.imageId); } catch (e) { continue; }
+      imgCache.set(it.imageId, data);
+      const thumb = (/^data:image\/svg/.test(data) && data.length <= 45000) ? data : await makeThumb(data);
+      if (!thumb) continue;
+      const cur = state.items.find(x => x.id === id); if (cur) cur.thumb = thumb;
+      try { await call('setThumb', id, thumb); } catch (e) {}
+    }
+    render(); saveCache();
+  } finally { thumbJob = false; }
+}
+
+async function loadItemLogs(id) {
+  try {
+    const logs = await call('getItemLogs', id, admToken);
+    if (!modal || modal.id !== id) return;
+    q1('#itemLogs').innerHTML = logs.length ? logs.map(l => logRow(l, false)).join('') : '<div class="l2">기록이 없습니다.</div>';
+  } catch (e) { if (/ADMIN_REQUIRED/.test(errMsg(e))) adminExpired(); const el = q1('#itemLogs'); if (el) el.innerHTML = '<div class="l2">기록을 불러오지 못했습니다.</div>'; }
+}
+
+function closeItem() { q1('#itemModal').classList.add('hidden'); modal = null; }
+
+/* 사진 줄이기: 파일을 통째로 글자로 바꾸지 않고 바로 읽어서 빠름. 원본은 800px로 */
+function resizeImage(file, max) {
+  max = Math.min(max || 800, 800);
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.round(img.width * s), h = Math.round(img.height * s);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg', 0.78));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('이미지를 읽을 수 없습니다.')); };
+    img.src = url;
+  });
+}
+
+/* ================= 장소 관리 창 (여러 장소 한 번에) ================= */
+function openMgr() {
+  mgr = { rows: state.locs.map(l => ({ id: l.id, name: l.name, memo: l.memo, count: countIn(l.id) })), removed: [] };
+  q1('#mgrModal').classList.remove('hidden');
+  renderMgr();
+}
+function renderMgr() {
+  const rows = mgr.rows;
+  q1('#mgrBox').innerHTML = `
+    <div class="mhead"><h2>${E.folder} 보관 장소 관리</h2><button class="x" data-mclose>✕</button></div>
+    <div class="mbody">
+      <div class="hint" style="margin:12px 0 4px">이름·설명을 바로 고치고, ↑ ↓ 로 순서를 바꾼 뒤 <b>모두 저장</b>을 누르세요.</div>
+      <div id="mgrList">${rows.map((l, i) => `
+        <div class="mgr-row" data-i="${i}">
+          <div class="mgr-order">
+            <button type="button" class="icon" data-mv="-1" ${i === 0 ? 'disabled' : ''} aria-label="위로">↑</button>
+            <button type="button" class="icon" data-mv="1" ${i === rows.length - 1 ? 'disabled' : ''} aria-label="아래로">↓</button>
+          </div>
+          <div class="mgr-fields">
+            <input class="mgr-name" data-f="name" value="${esc(l.name)}" placeholder="장소 이름 (예: 창고 C)">
+            <input class="mgr-memo" data-f="memo" value="${esc(l.memo)}" placeholder="설명 (선택, 예: 1층 계단 옆)">
+          </div>
+          <div class="mgr-side">
+            <span class="mgr-count">${l.id ? '물품 ' + l.count + '종' : '새 장소'}</span>
+            <button type="button" class="btn sm danger" data-rm>삭제</button>
+          </div>
+        </div>`).join('') || '<div class="empty" style="padding:30px">장소가 없습니다. 아래에서 추가하세요.</div>'}</div>
+      <button type="button" class="btn add-row" id="mgrAdd">+ 장소 추가</button>
+    </div>
+    <div class="mfoot"><span class="sp"></span><button type="button" class="btn" data-mclose>취소</button><button type="button" class="btn primary" id="mgrSave">모두 저장</button></div>`;
+}
+function closeMgr() { q1('#mgrModal').classList.add('hidden'); mgr = null; }
+
+q1('#mgrBox').addEventListener('input', e => {
+  const f = e.target.dataset.f; const row = e.target.closest('[data-i]');
+  if (f && row && mgr) mgr.rows[Number(row.dataset.i)][f] = e.target.value;
+});
+q1('#mgrBox').addEventListener('click', async e => {
+  if (!mgr) return;
+  const row = e.target.closest('[data-i]');
+  const i = row ? Number(row.dataset.i) : -1;
+  const mv = e.target.closest('[data-mv]');
+  if (mv && row) {
+    const j = i + Number(mv.dataset.mv);
+    if (j < 0 || j >= mgr.rows.length) return;
+    const t = mgr.rows[i]; mgr.rows[i] = mgr.rows[j]; mgr.rows[j] = t;
+    renderMgr();
+    const b = q1(`#mgrList [data-i="${j}"] [data-mv="${mv.dataset.mv}"]`); if (b && !b.disabled) b.focus();
+    return;
+  }
+  if (e.target.closest('[data-rm]') && row) {
+    const r = mgr.rows.splice(i, 1)[0];
+    if (r.id) mgr.removed.push(r);
+    renderMgr(); return;
+  }
+  if (e.target.closest('#mgrAdd')) {
+    mgr.rows.push({ id: '', name: '', memo: '', count: 0 });
+    renderMgr();
+    const inputs = qa('#mgrList .mgr-name'); if (inputs.length) inputs[inputs.length - 1].focus();
+    return;
+  }
+  if (e.target.closest('#mgrSave')) {
+    const empty = mgr.rows.findIndex(r => !r.name.trim());
+    if (empty >= 0) { toast((empty + 1) + '번째 장소 이름을 입력하세요.', true); qa('#mgrList .mgr-name')[empty].focus(); return; }
+    const moving = mgr.removed.filter(r => r.count > 0);
+    if (moving.length) {
+      const n = moving.reduce((s, r) => s + r.count, 0);
+      const names = moving.map(r => '"' + r.name + '"').join(', ');
+      if (!await ask(`${names} 장소를 삭제하면 그 안의 물품 ${n}종은 "장소 미지정"으로 옮겨집니다. (물품은 지워지지 않아요) 계속할까요?`, '삭제하고 저장')) return;
+    }
+    const btn = q1('#mgrSave'); btn.disabled = true; btn.textContent = '저장 중…';
+    const ok = await mutate('saveLocations', [mgr.rows.map(r => ({ id: r.id, name: r.name, memo: r.memo })), state.user, admToken], '장소를 저장했습니다.');
+    if (ok) closeMgr(); else { btn.disabled = false; btn.textContent = '모두 저장'; }
+  }
+});
+q1('#mgrBox').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.isComposing && e.target.tagName === 'INPUT') { e.preventDefault(); q1('#mgrSave').click(); }
+});
+
+/* ================= 작은 창 (장소 하나 / 이름 / 확인) ================= */
+function openSmall(html) { q1('#smallModalBox').innerHTML = html; q1('#smallModal').classList.remove('hidden'); }
+function closeSmall() { q1('#smallModal').classList.add('hidden'); }
+
+function openLoc(id) {
+  const l = id ? locById(id) : null;
+  const cnt = l ? countIn(l.id) : 0;
+  openSmall(`
+    <div class="mhead"><h2>${l ? '✏\uFE0F 보관 장소 편집' : '+ 새 보관 장소'}</h2><button class="x" data-sclose>✕</button></div>
+    <div class="mbody" style="padding-top:16px">
+      <label class="fld"><span>장소 이름</span><input id="lName" value="${esc(l ? l.name : '')}" placeholder="예: 창고 A, 2층 수납장" autocomplete="off"></label>
+      <label class="fld"><span>설명 (선택)</span><input id="lMemo" value="${esc(l ? l.memo : '')}" placeholder="예: 1층 포장 작업대 뒤 선반" autocomplete="off"></label>
+      ${l ? `<div class="hint">이 장소의 물품: ${cnt}종</div>` : '<div class="hint">여러 장소를 한꺼번에 고치려면 "장소 관리"를 쓰세요.</div>'}
+    </div>
+    <div class="mfoot">${l ? '<button type="button" class="btn danger" id="delLoc">삭제</button>' : ''}<span class="sp"></span>
+      <button type="button" class="btn" data-sclose>취소</button><button type="button" class="btn primary" id="saveLoc">저장</button></div>`);
+  setTimeout(() => q1('#lName').focus(), 50);
+  const save = async () => {
+    const name = q1('#lName').value.trim(); if (!name) { toast('장소 이름을 입력하세요.', true); return; }
+    const d = await mutate('saveLocation', [{ id: id || null, name: name, memo: q1('#lMemo').value.trim(), token: admToken }], '저장했습니다.');
+    if (d) closeSmall();
+  };
+  q1('#saveLoc').onclick = save;
+  q1('#smallModalBox').onkeydown = e => { if (e.key === 'Enter' && !e.isComposing && e.target.tagName === 'INPUT') { e.preventDefault(); save(); } };
+  if (l) q1('#delLoc').onclick = async () => {
+    const msg = cnt
+      ? `"${l.name}"을(를) 삭제할까요? 안에 있는 물품 ${cnt}종은 "장소 미지정"으로 옮겨집니다.`
+      : `"${l.name}"을(를) 삭제할까요?`;
+    if (!await ask(msg, '삭제')) return;
+    if (await mutate('deleteLocation', [id, state.user, admToken], '장소를 삭제했습니다.')) { state.loc = 'all'; render(); }
+  };
+}
+
+
+/* 관리자 버튼: 처음엔 비밀번호 만들기, 이후엔 비밀번호 입력 / 관리자 모드면 메뉴 */
+q1('#admBtn').onclick = () => { if (isAdm()) openAdminMenu(); else askAdmin(); };
+
+/* 관리자 모드 켜기 (비밀번호 없음) */
+function askAdmin(after) {
+  setAdmin('on');
+  toast('관리자 모드를 켰어요.');
+  if (typeof after === 'function') after();
+}
+
+function openAdminMenu() {
+  openSmall(`
+    <div class="mhead"><h2>\uD83D\uDEE1\uFE0F 관리자 메뉴</h2><button class="x" data-sclose>✕</button></div>
+    <div class="mbody admmenu" style="padding-top:12px">
+      <button type="button" data-am="logs"><b>\uD83D\uDCCB 입출고 내역</b><span>기간별 입고·출고 기록과 합계</span></button>
+      <button type="button" data-am="locs"><b>\uD83D\uDDC2\uFE0F 장소 관리</b><span>장소 추가 · 이름 · 순서 · 삭제</span></button>
+      <button type="button" data-am="out" class="out"><b>관리자 모드 끄기</b><span>일반 화면으로 돌아가기</span></button>
+    </div>`);
+  q1('#smallModalBox').onkeydown = null;
+  q1('#smallModalBox').querySelectorAll('[data-am]').forEach(b => b.onclick = () => {
+    const a = b.dataset.am; closeSmall();
+    if (a === 'logs') openLogs();
+    else if (a === 'locs') openMgr();
+    else { setAdmin(''); toast('관리자 모드를 껐어요.'); }
+  });
+}
+
+function ask(msg, okLabel) {
+  return new Promise(res => {
+    openSmall(`<div class="mbody" style="padding-top:22px;line-height:1.6">${esc(msg)}</div>
+      <div class="mfoot"><span class="sp"></span><button type="button" class="btn" id="askNo">취소</button><button type="button" class="btn danger" id="askYes">${esc(okLabel || '확인')}</button></div>`);
+    q1('#smallModalBox').onkeydown = null;
+    q1('#askNo').onclick = () => { closeSmall(); res(false); };
+    q1('#askYes').onclick = () => { closeSmall(); res(true); };
+  });
+}
+
+/* ================= 활동 기록 ================= */
+const TYPE_CLS = { '입고': 'in', '출고': 'out', '신규': 'new', '수정': 'edit', '삭제': 'del' };
+function fmtTime(iso) {
+  const d = new Date(iso); if (isNaN(d)) return '';
+  const diff = (Date.now() - d) / 1000;
+  if (diff < 60) return '방금';
+  if (diff < 3600) return Math.floor(diff / 60) + '분 전';
+  if (diff < 86400) return Math.floor(diff / 3600) + '시간 전';
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function logRow(l, showName, timeOnly) {
+  const d = l.delta;
+  const moved = l.before !== l.after;
+  const change = moved
+    ? `${l.before} → ${l.after} <span class="${d > 0 ? 'pos' : 'neg'}">(${d > 0 ? '+' : ''}${d})</span>`
+    : esc(l.note || '정보 수정');
+  const exists = showName && state.items.some(i => i.id === l.itemId);
+  const note = moved && l.note ? ' · ' + esc(l.note) : '';
+  return `<div class="log ${exists ? 'click' : ''}" ${exists ? `data-item="${esc(l.itemId)}"` : ''}>
+    <span class="lt ${TYPE_CLS[l.type] || 'edit'}">${esc(l.type)}</span>
+    <div class="lb"><div class="l1">${showName ? `<b>${esc(l.itemName)}</b> ` : ''}${change}</div>
+    <div class="l2">${timeOnly ? hhmm(new Date(l.timestamp)) : fmtTime(l.timestamp)}${note}</div></div></div>`;
+}
+/* 입출고 내역 (관리자): 기간 · 종류 · 물품 이름으로 걸러 보고, 입고/출고 합계를 보여줌 */
+let logPeriod = 7, logQ = '', sheetUrl = '';
+const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
+function hhmm(d) { return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+function dayLabel(d) {
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  const x = new Date(d); x.setHours(0, 0, 0, 0);
+  const diff = Math.round((t - x) / 86400000);
+  const base = `${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEK[d.getDay()]})`;
+  return diff === 0 ? '오늘 · ' + base : diff === 1 ? '어제 · ' + base : base;
+}
+function filteredLogs() {
+  let from = 0;
+  if (logPeriod === 1) { const t = new Date(); t.setHours(0, 0, 0, 0); from = t.getTime(); }
+  else if (logPeriod > 1) from = Date.now() - logPeriod * 86400000;
+  const q = logQ.toLowerCase();
+  return state.logs.filter(l => {
+    const t = new Date(l.timestamp).getTime();
+    if (from && !(t >= from)) return false;
+    if (q && !String(l.itemName).toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+function renderLogs() {
+  const base = filteredLogs();
+  const sum = { inN: 0, inQ: 0, outN: 0, outQ: 0, etc: 0 };
+  base.forEach(l => {
+    if (l.type === '입고') { sum.inN++; sum.inQ += l.delta; }
+    else if (l.type === '출고') { sum.outN++; sum.outQ += -l.delta; }
+    else sum.etc++;
+  });
+  q1('#logSum').innerHTML = `
+    <div class="ds in"><div class="k">입고</div><div class="v">${sum.inN}<small>건</small></div><div class="s">+${sum.inQ.toLocaleString()}개</div></div>
+    <div class="ds out"><div class="k">출고</div><div class="v">${sum.outN}<small>건</small></div><div class="s">−${sum.outQ.toLocaleString()}개</div></div>
+    <div class="ds etc"><div class="k">등록·수정·삭제</div><div class="v">${sum.etc}<small>건</small></div><div class="s">&nbsp;</div></div>`;
+  const list = base.filter(l => !state.logType || l.type === state.logType);
+  if (!list.length) { q1('#logList').innerHTML = '<div class="empty">이 기간에 기록이 없어요.</div>'; return; }
+  let html = '', lastDay = '';
+  list.forEach(l => {
+    const d = new Date(l.timestamp);
+    const day = isNaN(d) ? '' : d.toDateString();
+    if (day !== lastDay) { html += `<div class="lday">${isNaN(d) ? '' : dayLabel(d)}</div>`; lastDay = day; }
+    html += logRow(l, true, true);
+  });
+  q1('#logList').innerHTML = html;
+}
+async function refreshLogs() {
+  if (!isAdm()) return;
+  try {
+    const r = await call('getLogs', admToken);
+    state.logs = r.logs || []; sheetUrl = r.sheetUrl || '';
+    const a = q1('#sheetLink'); a.href = sheetUrl; a.classList.toggle('hidden', !sheetUrl);
+    renderLogs();
+  } catch (e) {
+    if (/ADMIN_REQUIRED/.test(errMsg(e))) adminExpired();
+    else q1('#logList').innerHTML = '<div class="empty">기록을 불러오지 못했어요.</div>';
+  }
+}
+function openLogs() {
+  if (!isAdm()) { askAdmin(openLogs); return; }
+  q1('#logList').innerHTML = '<div class="empty">불러오는 중…</div>';
+  q1('#logSum').innerHTML = '';
+  q1('#drawer').classList.remove('hidden');
+  refreshLogs();
+}
+q1('#logBtn').onclick = openLogs;
+q1('#closeDrawer').onclick = () => q1('#drawer').classList.add('hidden');
+q1('#logFilter').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  state.logType = b.dataset.t;
+  qa('#logFilter button').forEach(x => x.classList.toggle('on', x === b));
+  renderLogs();
+};
+q1('#logPeriod').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  logPeriod = Number(b.dataset.p);
+  qa('#logPeriod button').forEach(x => x.classList.toggle('on', x === b));
+  renderLogs();
+};
+q1('#logSearch').addEventListener('input', e => { logQ = e.target.value.trim(); renderLogs(); });
+q1('#logList').onclick = e => { const r = e.target.closest('[data-item]'); if (r) openItem(r.dataset.item); };
+
+/* ================= 공통 ================= */
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-close]') || e.target.id === 'itemModal') closeItem();
+  if (e.target.closest('[data-mclose]') || e.target.id === 'mgrModal') closeMgr();
+  if (e.target.closest('[data-sclose]') || e.target.id === 'smallModal') closeSmall();
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!q1('#smallModal').classList.contains('hidden')) closeSmall();
+  else if (!q1('#itemModal').classList.contains('hidden')) closeItem();
+  else if (!q1('#mgrModal').classList.contains('hidden')) closeMgr();
+  else q1('#drawer').classList.add('hidden');
+});
+
+/* 편집 중이거나 빠른 등록에 글자를 적는 중에는 자동 새로고침을 건너뜀 */
+function isEditing() {
+  const open = ['#itemModal', '#mgrModal', '#smallModal'].some(s => !q1(s).classList.contains('hidden'));
+  const typing = qa('#content form.qadd').some(f => f.elements.n.value.trim());
+  return open || typing || Object.keys(pending).length > 0;
+}
+setInterval(checkRev, 30000);
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushAll(); else checkRev(); });
+
+/* ================= 시작 ================= */
+state.user = '';
+state.view = lsGet('inv_view') === 'table' ? 'table' : 'card';
+qa('#viewSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === state.view));
+(function () { const d = new Date(); q1('#today').textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 ${WEEK[d.getDay()]}요일`; })();
+document.body.classList.toggle('is-admin', isAdm());
+if (isAdm()) { q1('#admBtn').innerHTML = '\uD83D\uDEE1\uFE0F 관리자 모드'; q1('#admBtn').classList.add('on'); }
+render();
+window.__INV_READY__ = true;
+initSpace(() => {
+  tellParent(space);
+  loadCache();   /* 저장해 둔 데이터로 즉시 화면 표시 */
+  load();
+});
+})();
+</script>
 </body>
 </html>
